@@ -43,19 +43,13 @@ else:
         }
         div.stFormSubmitButton > button:hover { background-color: #ff9900 !important; color: #11141a !important; }
         
-        /* h1, h2, h3 타이틀 */
         h1, h2, h3 { color: #ff9900 !important; margin-top: 5px !important; margin-bottom: 5px !important; font-weight: bold !important; }
         
-        /* 접기(Expander) 박스 블룸버그 다크 테마 커스텀 */
         div[data-testid="stExpander"] { background-color: #1c222d !important; border: 1px solid #3b4656 !important; border-radius: 4px; }
         div[data-testid="stExpander"] summary p { color: #ff9900 !important; font-weight: bold !important; font-size: 14px !important; }
         div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] { color: #ffffff !important; font-size: 13px !important; line-height: 1.6; }
         
-        /* ==========================================
-           ⚡ 반응형 하이브리드 레이아웃 아키텍처 핵심 CSS 
-           ========================================== */
-        
-        /* 1. PC 뷰용 기본 설정 (테이블 표출, 모바일 카드는 숨김) */
+        /* 반응형 하이브리드 CSS */
         .pc-table-view { display: block !important; }
         .mobile-card-view { display: none !important; }
         
@@ -63,23 +57,20 @@ else:
         th { background-color: #1c222d !important; color: #ff9900 !important; border: 1px solid #3b4656 !important; font-size: 13px; padding: 8px 12px !important; }
         td { border: 1px solid #3b4656 !important; padding: 8px 12px !important; font-size: 12px; background-color: #11141a !important; }
         
-        /* 2. 📱 모바일 브레이크포인트 (768px 이하 진입 시 레이아웃 트랜스포밍) */
         @media (max-width: 768px) {
             .block-container { max-width: 100% !important; padding: 1rem !important; padding-top: 2rem !important; }
             h3 { font-size: 16px !important; line-height: 1.3 !important; }
             div.stTextInput > label { font-size: 14px !important; }
             
-            /* 💡 핵심: PC용 가로 표는 아예 지워버리고, 모바일용 세로 카드를 스위치 ON */
             .pc-table-view { display: none !important; }
             .mobile-card-view { display: block !important; }
             
-            /* 모바일 카드 개별 스타일 */
             .overhang-card {
                 background-color: #1c222d !important;
                 border: 1px solid #3b4656 !important;
                 border-radius: 6px !important;
                 padding: 12px !important;
-                margin-bottom: 10px !important;
+                margin-bottom: 12px !important;
                 line-height: 1.5 !important;
             }
             .card-header {
@@ -89,23 +80,39 @@ else:
                 border-bottom: 1px solid #3b4656 !important;
                 padding-bottom: 6px !important;
                 margin-bottom: 8px !important;
-                display: flex;
-                justify-content: space-between;
+                display: flex !important;
+                justify-content: space-between !important;
             }
-            .card-row {
-                font-size: 12px !important;
-                margin-bottom: 4px !important;
-                color: #e0e0e0 !important;
-            }
-            .card-label {
-                color: #8a96a8 !important;
-                font-weight: bold !important;
-                display: inline-block;
-                width: 85px;
-            }
+            .card-row { font-size: 12px !important; margin-bottom: 5px !important; color: #e0e0e0 !important; }
+            .card-label { color: #8a96a8 !important; font-weight: bold !important; display: inline-block !important; width: 85px !important; }
         }
         </style>
         """, unsafe_allow_html=True)
+
+# ==========================================
+# ⚙️ 보안 관제 1호: 디스코드 실시간 알림 로깅 엔진 (복구 완료)
+# ==========================================
+def send_discord_log(ticker, company_name, pressure_summary):
+    DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
+    if not DISCORD_WEBHOOK_URL: return 
+    
+    # 디스코드에는 텍스트만 깔끔하게 전달되도록 HTML 태그 제거
+    clean_summary = pressure_summary.replace("🚨 [초극단적 품절주] ", "").replace("🔒 ", "").replace("✅ ", "")
+    
+    payload = {
+        "username": "BLOOMBERG DILUTION RADAR",
+        "embeds": [{
+            "title": f"📊 [ACCESS LOG] TARGET SCANNED: {ticker}",
+            "color": 16750848, 
+            "fields": [
+                {"name": "종목 풀네임", "value": company_name, "inline": True},
+                {"name": "수급 진단 결과", "value": clean_summary, "inline": False}
+            ],
+            "footer": {"text": "TERMINAL-OVERHANG-OPS AUDIT TRACE"}
+        }]
+    }
+    try: requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
+    except: pass
 
 # ==========================================
 # ⚙️ 데이터 연동 백엔드 코어 (SEC & YFinance)
@@ -182,24 +189,6 @@ def get_live_stock_info(ticker):
         
     return {"outstanding_shares": outstanding, "public_float": public_float, "float_ratio": float_ratio, "pressure_summary": pressure, "company_name": company_name, "border_color": border_color}
 
-def send_discord_log(ticker, company_name, pressure_summary):
-    DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
-    if not DISCORD_WEBHOOK_URL: return 
-    payload = {
-        "username": "BLOOMBERG DILUTION RADAR",
-        "embeds": [{
-            "title": f"📊 [ACCESS LOG] TARGET SCANNED: {ticker}",
-            "color": 16750848, 
-            "fields": [
-                {"name": "종목 풀네임", "value": company_name, "inline": True},
-                {"name": "수급 진단 결과", "value": pressure_summary, "inline": False}
-            ],
-            "footer": {"text": "TERMINAL-OVERHANG-OPS AUDIT TRACE"}
-        }]
-    }
-    try: requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
-    except: pass
-
 # ==========================================
 # 🖥️ 보안 관제 2호: 분석 래퍼 엔진 가동
 # ==========================================
@@ -236,45 +225,37 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             
             st.markdown("---")
             
-            # ==========================================
-            # 🖥️ 레이아웃 스위칭 렌더링 파트
-            # ==========================================
             master_categories = ["기존/신규 F-3 Shelf", "ATM / ELOC / SEPA", "전환사채 (CB) / 전환우선주", "워런트 (Warrants)", "Selling Shareholder Resale", "S-8 / 임직원 보상주식"]
             
-            # 1. 🖥️ PC 전용 가로 표 뷰 (HTML 템플릿 빌드)
+            # 1. 🖥️ PC 전용 가로 표 뷰 생성
             pc_html = "<div class='pc-table-view'><table>"
             pc_html += "<tr><th>CATEGORY</th><th>STATUS</th><th>SCALE</th><th>LATEST FILING</th><th>CASH INFLOW</th><th>SHAREHOLDER IMPACT</th><th>RISK</th></tr>"
             for cat in master_categories:
                 d = matrix_data.get(cat)
-                # 위험 컬러 맵핑
                 c_status = f"<span style='color:#ff3333;font-weight:bold;'>{d['exists']}</span>" if "⚠️" in d['exists'] else d['exists']
                 c_risk = f"<span style='color:#ff3333;font-weight:bold;'>{d['risk']}</span>" if d['risk'] in ['매우 높음', '높음'] else (f"<span style='color:#ff9900;font-weight:bold;'>{d['risk']}</span>" if d['risk'] == '확인 필요' else d['risk'])
-                
                 pc_html += f"<tr><td><b>{cat}</b></td><td>{c_status}</td><td>{d['scale']}</td><td>{d['stage']}</td><td>{d['cash_inflow']}</td><td>{d['impact']}</td><td>{c_risk}</td></tr>"
             pc_html += "</table></div>"
             st.markdown(pc_html, unsafe_allow_html=True)
             
-            # 2. 📱 모바일 전용 세로 정렬 카드 뷰 (HTML 템플릿 빌드)
+            # 2. 📱 모바일 전용 카드 뷰 생성 (공백 리스크 압축 공정)
             mobile_html = "<div class='mobile-card-view'>"
             for cat in master_categories:
                 d = matrix_data.get(cat)
                 c_status = f"<span style='color:#ff3333;font-weight:bold;'>{d['exists']}</span>" if "⚠️" in d['exists'] else d['exists']
                 c_risk = f"<span style='color:#ff3333;font-weight:bold;'>{d['risk']}</span>" if d['risk'] in ['매우 높음', '높음'] else (f"<span style='color:#ff9900;font-weight:bold;'>{d['risk']}</span>" if d['risk'] == '확인 필요' else d['risk'])
                 
-                # 7개의 칸을 세로형 컴팩트 카드로 줄바꿈 배치
-                mobile_html += f"""
-                <div class='overhang-card'>
-                    <div class='card-header'>
-                        <span>📌 {cat}</span>
-                        <span>{c_risk}</span>
-                    </div>
-                    <div class='card-row'><span class='card-label'>• 상태:</span> {c_status}</div>
-                    <div class='card-row'><span class='card-label'>• 규모:</span> {d['scale']}</div>
-                    <div class='card-row'><span class='card-label'>• 최근공시:</span> {d['stage']}</div>
-                    <div class='card-row'><span class='card-label'>• 자금유입:</span> {d['cash_inflow']}</div>
-                    <div class='card-row'><span class='card-label'>• 주주영향:</span> {d['impact']}</div>
-                </div>
-                """
+                card_chunk = (
+                    "<div class='overhang-card'>"
+                    f"<div class='card-header'><span>📌 {cat}</span><span>{c_risk}</span></div>"
+                    f"<div class='card-row'><span class='card-label'>• 상태:</span> {c_status}</div>"
+                    f"<div class='card-row'><span class='card-label'>• 규모:</span> {d['scale']}</div>"
+                    f"<div class='card-row'><span class='card-label'>• 최근공시:</span> {d['stage']}</div>"
+                    f"<div class='card-row'><span class='card-label'>• 자금유입:</span> {d['cash_inflow']}</div>"
+                    f"<div class='card-row'><span class='card-label'>• 주주영향:</span> {d['impact']}</div>"
+                    "</div>"
+                )
+                mobile_html += card_chunk
             mobile_html += "</div>"
             st.markdown(mobile_html, unsafe_allow_html=True)
 
@@ -285,11 +266,9 @@ with streamlit_analytics.track(unsafe_password=admin_password):
         st.markdown("#### **1. 상단 실제 유통 주식 수 (Public Float) 확인**")
         st.markdown("• **500만 주 미만** (:red[**🚨 초극단적 품절주**]): 적은 거래량으로도 상한가 제한 없이 수백% 폭등할 수 있지만, 반대로 세력이 던지면 하한가 없이 폭락하는 양날의 검입니다. 철저히 당일 단타로만 접근하십시오.")
         st.markdown("---") 
-        
         st.markdown("#### **2. 하단 오버행 매트릭스 리스크 체크**")
         st.markdown("• :red[**⚠️ 존재 (F-3 Shelf)**]: 회사가 대규모 유상증자 폭탄을 장착해 둔 상태입니다. 주가가 호재를 타고 폭등할 때 회사가 스위치를 켜고 주식을 기습 투하하므로 오버나이트(다음날로 물량 넘기기)는 절대 자제하십시오.")
         st.markdown("• :red[**⚠️ 가동 의심 (ATM / ELOC)**]: 증권사를 통해 장중에 기계적으로 매물을 찔끔찔끔 던지는 악성 매도 계약이 체결된 상태입니다. 주가가 올라가려고 할 때마다 머리를 누르는 '두더지 망치' 역할을 하므로 장기 상승이 어렵습니다.")
         st.markdown("---")
-        
         st.markdown("#### **3. 🚀 최고의 단타 황금 조합**")
         st.markdown("• 실제 유통 주식 수는 500만 주 미만으로 가벼운데, 아래 매트릭스에 유상증자 무기(F-3, ATM) 리스크가 전부 :green[**'없음/낮음'**]인 종목 ➡️ 위에서 누르는 매물이 전혀 없기 때문에 세력이 마음 놓고 펌핑을 주도할 수 있는 최고의 작전주 후보군입니다.")
