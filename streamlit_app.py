@@ -4,31 +4,38 @@ import requests
 import time
 
 # ==========================================
-# 0. 앱 기본 설정 & 초압축 매트릭스 다크 테마 강제 주입
+# 0. 앱 기본 설정 & 매트릭스 다크 테마 보정
 # ==========================================
-st.set_page_config(page_title="Terminal Overhang Ops", layout="wide")
+st.set_page_config(page_title="Mimi Hack Terminal", layout="wide")
 
 st.markdown("""
     <style>
-    /* 💡 개선 1: Streamlit 자체의 거대한 상하 여백(패딩)을 완전히 제거하여 한 화면에 피팅 */
-    .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; max-width: 95% !important; }
+    /* 상하 여백은 컴팩트하게 유지하되 화면이 깨지지 않는 선으로 조절 */
+    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; max-width: 95% !important; }
     
-    /* 💡 개선 2: 시스템 테마(라이트/다크)를 무시하고 칠흑색 배경과 초록 글씨 강제 고정 */
+    /* 시스템 테마 무시, 칠흑색 배경 강제 */
     .stApp { background-color: #050505 !important; color: #00FF41 !important; font-family: 'Courier New', Courier, monospace; }
     
-    /* 입력창 레이블 가독성 및 여백 축소 */
-    div.stTextInput > label { 
+    /* 💡 수정 포인트 1: 뭉개짐 해결을 위해 음수 마진 제거 및 하단 패딩(여백) 확보 */
+    div.stTextInput > label, label[data-testid="stWidgetLabel"] { 
         color: #00FF41 !important; 
-        font-size: 18px !important; 
+        font-size: 16px !important; 
         font-weight: bold !important; 
-        text-shadow: 0px 0px 8px #00FF41;
-        margin-bottom: -10px !important;
+        text-shadow: 0px 0px 5px #00FF41;
+        margin-bottom: 5px !important;
+        display: inline-block !important;
     }
     
-    /* 입력창 다크 고정 */
-    div.stTextInput > div > div > input { background-color: #000000 !important; color: #00FF41 !important; border: 1px solid #00FF41 !important; font-size: 16px; }
+    /* 입력창 내부 스타일 및 테두리 격리 */
+    div.stTextInput > div > div > input { 
+        background-color: #000000 !important; 
+        color: #00FF41 !important; 
+        border: 1px solid #00FF41 !important; 
+        font-size: 16px;
+        margin-top: 2px !important;
+    }
     
-    /* 💡 개선 3: 라이트 모드 환경에서도 버튼이 하얗게 뜨지 않도록 강제 다크 스타일 고정 (!important) */
+    /* 버튼 스타일 고정 */
     div.stButton > button, div.stFormSubmitButton > button { 
         background-color: #000000 !important; 
         color: #00FF41 !important; 
@@ -37,17 +44,15 @@ st.markdown("""
         width: 100% !important; 
         height: 38px !important; 
         font-size: 15px !important;
-        box-shadow: 0px 0px 5px #002200;
     }
     div.stButton > button:hover, div.stFormSubmitButton > button:hover { background-color: #00FF41 !important; color: #000000 !important; }
     
-    /* 💡 개선 4: 표(Table) 내부 컴팩트 여백 조정으로 스크롤 발생 원천 차단 */
-    table { width: 100%; border-collapse: collapse; color: #00FF41 !important; margin-top: -10px !important; }
-    th { background-color: #001100 !important; color: #00FF41 !important; border: 1px solid #00FF41 !important; font-size: 14px; padding: 4px 6px !important; }
-    td { border: 1px solid #00FF41 !important; padding: 4px 6px !important; font-size: 13px; background-color: #000000 !important; }
+    /* 💡 수정 포인트 2: 가독성을 위해 표(Table) 내부 여백을 미세하게 늘려 뭉개짐 방지 */
+    table { width: 100%; border-collapse: collapse; color: #00FF41 !important; margin-top: 5px !important; }
+    th { background-color: #001100 !important; color: #00FF41 !important; border: 1px solid #00FF41 !important; font-size: 14px; padding: 6px 10px !important; }
+    td { border: 1px solid #00FF41 !important; padding: 6px 10px !important; font-size: 13px; background-color: #000000 !important; }
     
-    /* 가구분선 및 타이틀 간격 축소 */
-    hr { margin: 0.5rem 0 !important; border-color: #004411 !important; }
+    hr { margin: 0.8rem 0 !important; border-color: #004411 !important; }
     h1, h2, h3 { color: #00FF41 !important; text-shadow: 0px 0px 5px #00FF41; margin-top: 5px !important; margin-bottom: 5px !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -119,26 +124,23 @@ def get_live_stock_info(ticker):
     return {"outstanding_shares": outstanding, "public_float": public_float, "float_ratio": float_ratio, "pressure_summary": pressure, "company_name": company_name}
 
 # ==========================================
-# 🖥️ 스트림릿 웹 UI 구성 (초압축 레이아웃)
+# 🖥️ 스트림릿 웹 UI 구성
 # ==========================================
-st.markdown("### 💻 TERMINAL-OVERHANG-OPS v1.2 `STATUS: ONLINE`")
+st.markdown("### 💻 TERMINAL-OVERHANG-OPS v1 `STATUS: ONLINE`")
 
 with st.form(key='hacker_terminal_form'):
     ticker_input = st.text_input("▶ ENTER TARGET TICKER:", "MIMI").upper()
     submit_button = st.form_submit_button("EXECUTE SCAN (ENTER)")
 
 if submit_button and ticker_input:
-    # 연출 시간 축소 (한 화면 핏을 위해 불필요한 딜레이 최소화)
     terminal_output = st.empty()
     terminal_output.markdown("`[SYSTEM] CONNECTING TO SEC MAINFRAME... OK.`")
-    time.sleep(0.3)
+    time.sleep(0.2)
     terminal_output.empty()
     
     stock_info = get_live_stock_info(ticker_input)
     matrix_data = scan_sec_filings(ticker_input)
     
-    # 💡 개선 5: 좌우 분할 구조(Columns)를 사용해 수치 현황과 표를 압축 배치하는 것도 좋지만, 
-    # 마진을 바짝 줄여 상하로 배치해도 한 화면에 딱 붙도록 레이아웃 고도화
     st.markdown(f"**📂 [{ticker_input}] {stock_info['company_name']}**")
     st.markdown(f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | **실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n> 🔍 **진단:** {stock_info['pressure_summary']}")
     st.markdown("---")
