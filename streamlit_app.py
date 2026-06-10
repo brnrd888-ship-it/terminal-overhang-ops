@@ -10,13 +10,13 @@ st.set_page_config(page_title="Mimi Hack Terminal", layout="wide")
 
 st.markdown("""
     <style>
-    /* 상하 여백은 컴팩트하게 유지하되 화면이 깨지지 않는 선으로 조절 */
-    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; max-width: 95% !important; }
+    /* 💡 수정 포인트 1: 상단 천장과의 간격을 시원하게 떨어뜨리기 위해 패딩 증가 (1.5rem -> 3.5rem) */
+    .block-container { padding-top: 3.5rem !important; padding-bottom: 1rem !important; max-width: 95% !important; }
     
     /* 시스템 테마 무시, 칠흑색 배경 강제 */
     .stApp { background-color: #050505 !important; color: #00FF41 !important; font-family: 'Courier New', Courier, monospace; }
     
-    /* 💡 수정 포인트 1: 뭉개짐 해결을 위해 음수 마진 제거 및 하단 패딩(여백) 확보 */
+    /* 입력창 레이블 가독성 및 하단 패딩 확보 */
     div.stTextInput > label, label[data-testid="stWidgetLabel"] { 
         color: #00FF41 !important; 
         font-size: 16px !important; 
@@ -47,7 +47,7 @@ st.markdown("""
     }
     div.stButton > button:hover, div.stFormSubmitButton > button:hover { background-color: #00FF41 !important; color: #000000 !important; }
     
-    /* 💡 수정 포인트 2: 가독성을 위해 표(Table) 내부 여백을 미세하게 늘려 뭉개짐 방지 */
+    /* 표(Table) 내부 여백 및 다크 스타일 */
     table { width: 100%; border-collapse: collapse; color: #00FF41 !important; margin-top: 5px !important; }
     th { background-color: #001100 !important; color: #00FF41 !important; border: 1px solid #00FF41 !important; font-size: 14px; padding: 6px 10px !important; }
     td { border: 1px solid #00FF41 !important; padding: 6px 10px !important; font-size: 13px; background-color: #000000 !important; }
@@ -126,7 +126,8 @@ def get_live_stock_info(ticker):
 # ==========================================
 # 🖥️ 스트림릿 웹 UI 구성
 # ==========================================
-st.markdown("### 💻 TERMINAL-OVERHANG-OPS v1 `STATUS: ONLINE`")
+# 💡 수정 포인트 2: 요청하신 타이틀 문구 양식 그대로 칼변경 완료
+st.markdown("### 💻 TERMINAL-OVERHANG-OPS v1.0 `STATUS: ONLINE`")
 
 with st.form(key='hacker_terminal_form'):
     ticker_input = st.text_input("▶ ENTER TARGET TICKER:", "MIMI").upper()
