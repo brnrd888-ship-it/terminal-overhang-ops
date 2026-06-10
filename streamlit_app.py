@@ -1,24 +1,32 @@
 import streamlit as st
 import yfinance as yf
 import requests
-import time  # 💡 개선 포인트 1: 해커 터미널 연출을 위한 시간 지연 모듈 추가
+import time
 
 # ==========================================
 # 0. 앱 기본 설정 & 매트릭스 테마 CSS 적용
 # ==========================================
-st.set_page_config(page_title="Mimi Hack Terminal", layout="wide")
+st.set_page_config(page_title="Terminal Overhang Ops", layout="wide")
 
-# 💡 개선 포인트 2: 더욱 완벽한 해커 테마를 위한 세밀한 CSS 적용 (표 테두리, 배경색 강제 지정)
 st.markdown("""
     <style>
     /* 전체 배경과 폰트 설정 */
     .stApp { background-color: #050505; color: #00FF41; font-family: 'Courier New', Courier, monospace; }
     
+    /* 💡 개선 포인트 1: 입력창 레이블 글자 크기 키우고 형광색+그림자 효과로 가독성 극대화 */
+    div.stTextInput > label { 
+        color: #00FF41 !important; 
+        font-size: 22px !important; 
+        font-weight: bold !important; 
+        text-shadow: 0px 0px 10px #00FF41;
+        letter-spacing: 1px;
+    }
+    
     /* 텍스트 입력창 스타일링 */
-    div.stTextInput > div > div > input { background-color: #000000; color: #00FF41; border: 1px solid #00FF41; }
+    div.stTextInput > div > div > input { background-color: #000000; color: #00FF41; border: 1px solid #00FF41; font-size: 18px; }
     
     /* 버튼 스타일링 */
-    div.stButton > button { background-color: #000000; color: #00FF41; border: 1px solid #00FF41; font-weight: bold; width: 100%; }
+    div.stButton > button { background-color: #000000; color: #00FF41; border: 1px solid #00FF41; font-weight: bold; width: 100%; height: 45px; font-size: 16px; }
     div.stButton > button:hover { background-color: #00FF41; color: #000000; }
     
     /* 마크다운 표(Table) 스타일링 */
@@ -26,7 +34,6 @@ st.markdown("""
     th { background-color: #002200 !important; color: #00FF41 !important; border: 1px solid #00FF41 !important; font-size: 16px;}
     td { border: 1px solid #00FF41 !important; padding: 8px; font-size: 14px;}
     
-    /* 경고 메시지 색상 */
     h1, h2, h3 { color: #00FF41 !important; text-shadow: 0px 0px 5px #00FF41; }
     </style>
     """, unsafe_allow_html=True)
@@ -38,14 +45,11 @@ SEC_HEADERS = {
     'User-Agent': 'NeoTerminal neo@matrix.com' 
 }
 
-# 💡 개선 포인트 3: @st.cache_data 적용
-# 동일한 티커를 반복 검색할 때마다 API를 새로 호출하면 차단당할 수 있습니다. 
-# 캐싱을 적용해 한 번 검색한 데이터는 1시간(3600초) 동안 기억하게 만들어 속도와 안정성을 높였습니다.
 @st.cache_data(ttl=3600)
 def get_cik_from_ticker(ticker):
     url = "https://www.sec.gov/files/company_tickers.json"
     try:
-        response = requests.get(url, headers=SEC_HEADERS, timeout=10) # 💡 타임아웃 추가(무한 로딩 방지)
+        response = requests.get(url, headers=SEC_HEADERS, timeout=10)
         data = response.json()
         for key, value in data.items():
             if value['ticker'] == ticker.upper():
@@ -107,12 +111,13 @@ def get_live_stock_info(ticker):
     try:
         stock = yf.Ticker(ticker)
         info = stock.info
-        # 💡 개선 포인트 4: 야후 데이터 누락 방어 로직
-        # 야후 API가 가끔 응답을 제대로 주지 않을 때 프로그램이 죽는 것을 방지합니다.
         outstanding = info.get('sharesOutstanding') or 0
         public_float = info.get('floatShares') or 0
+        # 💡 개선 포인트 2: 종목 풀네임(longName) 실시간 추출 로직 추가
+        company_name = info.get('longName') or info.get('shortName') or "UNKNOWN COMPANY"
     except:
         outstanding, public_float = 0, 0
+        company_name = "UNKNOWN COMPANY"
         
     float_ratio = round((public_float / outstanding) * 100, 1) if outstanding > 0 else 0.0
     
@@ -121,7 +126,13 @@ def get_live_stock_info(ticker):
     elif float_ratio < 40: pressure = "🔒 락업 물량이 많아 유통량이 철저히 통제되고 있습니다."
     else: pressure = "✅ 유통물량이 충분하여 수급 압박이 적습니다."
 
-    return {"outstanding_shares": outstanding, "public_float": public_float, "float_ratio": float_ratio, "pressure_summary": pressure}
+    return {
+        "outstanding_shares": outstanding, 
+        "public_float": public_float, 
+        "float_ratio": float_ratio, 
+        "pressure_summary": pressure,
+        "company_name": company_name
+    }
 
 # ==========================================
 # 🖥️ 스트림릿 웹 UI 구성
@@ -130,39 +141,42 @@ st.title("💻 ZERO-DAY DILUTION SCANNER v1.0")
 st.markdown("`SYSTEM STATUS: ONLINE` | `SEC MAINFRAME: CONNECTED`")
 st.markdown("---")
 
-# 입력창
-ticker_input = st.text_input("▶ ENTER TARGET TICKER (e.g. TSLA, GME, MULN):", "MIMI").upper()
+# 💡 개선 포인트 3: st.form으로 감싸서 '엔터(Enter)' 입력 지원 적용
+with st.form(key='hacker_terminal_form', clear_on_submit=False):
+    # 예시 가이드를 지우고 레이블 폰트 가독성을 극대화함
+    ticker_input = st.text_input("▶ ENTER TARGET TICKER:", "MIMI").upper()
+    submit_button = st.form_submit_button("EXECUTE ANALYSIS")
 
-# 실행 버튼
-if st.button("EXECUTE ANALYSIS"):
+# 실행 조건문 (버튼 클릭 혹은 엔터 입력 시 실행)
+if submit_button:
     if ticker_input:
         
-        # 💡 개선 포인트 5: 해커 영화 같은 로딩 시퀀스 연출
-        # 곧바로 결과가 나오지 않고, 콘솔 창에서 텍스트가 순서대로 찍히는 연출을 추가했습니다.
         terminal_output = st.empty()
         terminal_output.markdown("> `INITIATING CONNECTION TO SEC EDGAR DATABASE...`")
-        time.sleep(0.7)
+        time.sleep(0.5)
         terminal_output.markdown("> `BYPASSING FIREWALL... SUCCESS.`")
-        time.sleep(0.7)
+        time.sleep(0.5)
         terminal_output.markdown(f"> `EXTRACTING LIVE DATA FOR [{ticker_input}]...`")
-        time.sleep(1)
-        terminal_output.empty() # 연출 후 텍스트 지우기
+        time.sleep(0.6)
+        terminal_output.empty()
         
-        # 데이터 수집 (캐시가 있으면 즉시 통과, 없으면 다운로드)
+        # 데이터 수집
         stock_info = get_live_stock_info(ticker_input)
         matrix_data = scan_sec_filings(ticker_input)
         
-        # 1. 주식 수 현황 마크다운 생성
-        st.subheader(f"📂 [{ticker_input}] LIVE SHARE STRUCTURE")
+        # 💡 개선 포인트 4: 티커 옆에 종목 풀네임이 직관적으로 출력되도록 수정
+        st.subheader(f"📂 [{ticker_input}] {stock_info['company_name']}")
+        
+        # 💡 개선 포인트 5: 요청하신 주식 수 현황을 완벽하게 한글화하여 직관성 업그레이드
         st.markdown(f"""
-        * **Total Outstanding Shares:** {stock_info['outstanding_shares']:,} 
-        * **Public Float (Trading Shares):** {stock_info['public_float']:,} ({stock_info['float_ratio']}%)
-        > 🔍 **THREAT LEVEL:** {stock_info['pressure_summary']}
+        * **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주
+        * **실제 유통 주식 수 (공동 플로트):** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)
+        > 🔍 **위험 진단 결과:** {stock_info['pressure_summary']}
         """)
         
         st.markdown("---")
         
-        # 2. 오버행 매트릭스 마크다운 생성
+        # 2. 오버행 매트릭스 출력
         st.subheader("📊 OVERHANG & DILUTION MATRIX")
         table_md = "| CATEGORY | STATUS | SCALE | LATEST FILING | CASH INFLOW | SHAREHOLDER IMPACT | RISK LEVEL |\n"
         table_md += "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
