@@ -49,7 +49,6 @@ else:
         div[data-testid="stExpander"] summary p { color: #ff9900 !important; font-weight: bold !important; font-size: 14px !important; }
         div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] { color: #ffffff !important; font-size: 13px !important; line-height: 1.6; }
         
-        /* 💡 수정 포인트 1: 문제가 된 <hr> 구분선의 거대한 마진을 완벽하게 압축 (상하 4px로 조임) */
         hr, div[data-testid="stMarkdownContainer"] hr { 
             margin: 4px 0 !important; 
             padding: 0 !important;
@@ -95,6 +94,35 @@ else:
         }
         </style>
         """, unsafe_allow_html=True)
+
+# ==========================================
+# ⚙️ 보안 관제 1호: 디스코드 실시간 알림 로깅 엔진 (이모지 정밀 복구)
+# ==========================================
+def send_discord_log(ticker, company_name, pressure_summary, border_color):
+    DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
+    if not DISCORD_WEBHOOK_URL: return 
+    
+    # 💡 수정 포인트 1: 아이콘 뭉개짐 방지를 위해 웹 화면용 HTML 태그만 정확하게 필터링하여 이모지 보존
+    clean_summary = pressure_summary.replace("<span style='color:#ff9900;'>", "").replace("<span style='color:#ff3333; font-weight:bold;'>", "").replace("<span style='color:#00FF41;'>", "").replace("</span>", "")
+    
+    # 💡 수정 포인트 2: 진단 위험도 컬러(레드/오렌지/그린)를 디스코드 임베드 사이드 컬러 바에 동적 연동
+    color_map = {"#ff3333": 16724787, "#ff9900": 16750848, "#00FF41": 65345}
+    embed_color = color_map.get(border_color, 16750848)
+    
+    payload = {
+        "username": "BLOOMBERG DILUTION RADAR",
+        "embeds": [{
+            "title": f"📊 [ACCESS LOG] TARGET SCANNED: {ticker}",
+            "color": embed_color, 
+            "fields": [
+                {"name": "종목 풀네임", "value": company_name, "inline": True},
+                {"name": "수급 진단 결과", "value": clean_summary, "inline": False}
+            ],
+            "footer": {"text": "TERMINAL-OVERHANG-OPS AUDIT TRACE"}
+        }]
+    }
+    try: requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
+    except: pass
 
 # ==========================================
 # ⚙️ 데이터 연동 백엔드 코어 (SEC & YFinance)
@@ -154,7 +182,6 @@ def get_live_stock_info(ticker):
         public_float = info.get('floatShares') or 0
         company_name = info.get('longName') or info.get('shortName') or "UNKNOWN COMPANY"
         
-        # 💡 신규 연동: 등락 엔진용 야후 파이낸스 원천 데이터 추가 추출
         current_price = info.get('regularMarketPrice') or info.get('currentPrice') or 0.0
         price_change = info.get('regularMarketChange') or 0.0
         price_change_percent = info.get('regularMarketChangePercent') or 0.0
@@ -190,25 +217,6 @@ def get_live_stock_info(ticker):
         "price_change_percent": price_change_percent
     }
 
-def send_discord_log(ticker, company_name, pressure_summary):
-    DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
-    if not DISCORD_WEBHOOK_URL: return 
-    clean_summary = pressure_summary.replace("🚨 [초극단적 품절주] ", "").replace("🔒 ", "").replace("✅ ", "")
-    payload = {
-        "username": "BLOOMBERG DILUTION RADAR",
-        "embeds": [{
-            "title": f"📊 [ACCESS LOG] TARGET SCANNED: {ticker}",
-            "color": 16750848, 
-            "fields": [
-                {"name": "종목 풀네임", "value": company_name, "inline": True},
-                {"name": "수급 진단 결과", "value": clean_summary, "inline": False}
-            ],
-            "footer": {"text": "TERMINAL-OVERHANG-OPS AUDIT TRACE"}
-        }]
-    }
-    try: requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
-    except: pass
-
 # ==========================================
 # 🖥️ 보안 관제 2호: 분석 래퍼 엔진 가동
 # ==========================================
@@ -230,9 +238,9 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             stock_info = get_live_stock_info(ticker_input)
             matrix_data = scan_sec_filings(ticker_input)
             
-            send_discord_log(ticker_input, stock_info['company_name'], stock_info['pressure_summary'])
+            # 💡 수정 포인트 3: 디스코드 전송 시 국경선 컬러 인자(border_color)를 추가 전달하여 동적 컬러 매핑 연동
+            send_discord_log(ticker_input, stock_info['company_name'], stock_info['pressure_summary'], stock_info['border_color'])
             
-            # 💡 [정리 포인트 1] 수치 포맷팅 안전장치 가동
             current_price = stock_info['current_price']
             price_change = stock_info['price_change']
             change_percent = stock_info['price_change_percent']
@@ -240,20 +248,17 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             price_fmt = f"{current_price:,.2f}" if isinstance(current_price, float) and not current_price.is_integer() else f"{current_price:,}"
             change_fmt = f"{abs(price_change):,.2f}" if isinstance(price_change, float) and not price_change.is_integer() else f"{abs(price_change):,}"
             
-            # 💡 [정리 포인트 2] 등락 상태 조건 분기를 딕셔너리로 압축 최적화 (다크 모드 가시성 컬러 매핑)
             is_positive = price_change >= 0
             ui_status = {
                 True:  {"color": "#ff3333", "sign": "+", "emoji": "🔺"},
                 False: {"color": "#3388ff", "sign": "-", "emoji": "🔻"}
             }[is_positive]
             
-            # 💡 [정리 포인트 3] 요청하신 레이아웃대로 시퀀스 출력 가동
-            # [1] 종목명 타이틀 (상하 마진 조여서 한눈에 들어오게 설계)
             st.markdown(
                 f"<h3 style='margin-top: 5px; margin-bottom: 0px; color: #ff9900;'>{stock_info['company_name']} ({ticker_input})</h3>", 
                 unsafe_allow_html=True
             )
-            
+
             # [2] 현재 주가 및 등락금액(등락률) 표시 (HTML 래핑)
             st.markdown(
                 f"<h2 style='margin-top: 2px; margin-bottom: 6px; display: inline-block; font-weight: bold;'>"
