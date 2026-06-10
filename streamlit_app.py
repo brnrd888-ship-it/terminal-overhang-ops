@@ -250,7 +250,7 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             # 💡 [정리 포인트 3] 요청하신 레이아웃대로 시퀀스 출력 가동
             # [1] 종목명 타이틀 (상하 마진 조여서 한눈에 들어오게 설계)
             st.markdown(
-                f"<h3 style='margin-top: 5px; margin-bottom: 0px; color: #ff9900;'>📂 {stock_info['company_name']} ({ticker_input})</h3>", 
+                f"<h3 style='margin-top: 5px; margin-bottom: 0px; color: #ff9900;'>{stock_info['company_name']} ({ticker_input})</h3>", 
                 unsafe_allow_html=True
             )
             
