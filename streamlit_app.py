@@ -153,7 +153,16 @@ def get_live_stock_info(ticker):
         outstanding = info.get('sharesOutstanding') or 0
         public_float = info.get('floatShares') or 0
         company_name = info.get('longName') or info.get('shortName') or "UNKNOWN COMPANY"
-    except: outstanding, public_float, company_name = 0, 0, "UNKNOWN COMPANY"
+        
+        # 💡 신규 연동: 등락 엔진용 야후 파이낸스 원천 데이터 추가 추출
+        current_price = info.get('regularMarketPrice') or info.get('currentPrice') or 0.0
+        price_change = info.get('regularMarketChange') or 0.0
+        price_change_percent = info.get('regularMarketChangePercent') or 0.0
+        
+    except: 
+        outstanding, public_float, company_name = 0, 0, "UNKNOWN COMPANY"
+        current_price, price_change, price_change_percent = 0.0, 0.0, 0.0
+        
     float_ratio = round((public_float / outstanding) * 100, 1) if outstanding > 0 else 0.0
     
     if public_float == 0: 
@@ -169,7 +178,17 @@ def get_live_stock_info(ticker):
         pressure = "✅ 유통물량 충분. 수급 압박 적음."
         border_color = "#00FF41"
         
-    return {"outstanding_shares": outstanding, "public_float": public_float, "float_ratio": float_ratio, "pressure_summary": pressure, "company_name": company_name, "border_color": border_color}
+    return {
+        "outstanding_shares": outstanding, 
+        "public_float": public_float, 
+        "float_ratio": float_ratio, 
+        "pressure_summary": pressure, 
+        "company_name": company_name, 
+        "border_color": border_color,
+        "current_price": current_price,
+        "price_change": price_change,
+        "price_change_percent": price_change_percent
+    }
 
 def send_discord_log(ticker, company_name, pressure_summary):
     DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
@@ -213,16 +232,52 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             
             send_discord_log(ticker_input, stock_info['company_name'], stock_info['pressure_summary'])
             
-            st.markdown(f"### 📊 {stock_info['company_name']}\n*{ticker_input}*")
-            st.markdown(f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | **실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n")
+            # 💡 [정리 포인트 1] 수치 포맷팅 안전장치 가동
+            current_price = stock_info['current_price']
+            price_change = stock_info['price_change']
+            change_percent = stock_info['price_change_percent']
             
+            price_fmt = f"{current_price:,.2f}" if isinstance(current_price, float) and not current_price.is_integer() else f"{current_price:,}"
+            change_fmt = f"{abs(price_change):,.2f}" if isinstance(price_change, float) and not price_change.is_integer() else f"{abs(price_change):,}"
+            
+            # 💡 [정리 포인트 2] 등락 상태 조건 분기를 딕셔너리로 압축 최적화 (다크 모드 가시성 컬러 매핑)
+            is_positive = price_change >= 0
+            ui_status = {
+                True:  {"color": "#ff3333", "sign": "+", "emoji": "🔺"},
+                False: {"color": "#3388ff", "sign": "-", "emoji": "🔻"}
+            }[is_positive]
+            
+            # 💡 [정리 포인트 3] 요청하신 레이아웃대로 시퀀스 출력 가동
+            # [1] 종목명 타이틀 (상하 마진 조여서 한눈에 들어오게 설계)
+            st.markdown(
+                f"<h3 style='margin-top: 5px; margin-bottom: 0px; color: #ff9900;'>📂 {stock_info['company_name']} ({ticker_input})</h3>", 
+                unsafe_allow_html=True
+            )
+            
+            # [2] 현재 주가 및 등락금액(등락률) 표시 (HTML 래핑)
+            st.markdown(
+                f"<h2 style='margin-top: 2px; margin-bottom: 6px; display: inline-block; font-weight: bold;'>"
+                f"${price_fmt} "
+                f"<span style='color: {ui_status['color']}; font-size: 18px; font-weight: bold; margin-left: 6px;'>"
+                f"{ui_status['emoji']} {ui_status['sign']}{change_fmt} ({ui_status['sign']}{abs(change_percent):.2f}%)"
+                f"</span>"
+                f"</h2>",
+                unsafe_allow_html=True
+            )
+            
+            # [3] 총 발행 주식 수 및 실제 유통 주식 수
+            st.markdown(
+                f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | "
+                f"**실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n"
+            )
+            
+            # 진단 경보 박스
             st.markdown(f"""
-            <div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 10px 0; border-radius: 2px;'>
+            <div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 8px 0; border-radius: 2px;'>
                 <b style='color: {stock_info['border_color']}; font-size: 14px;'>🔍 시스템 종합 진단:</b> {stock_info['pressure_summary']}
             </div>
             """, unsafe_allow_html=True)
             
-            # 💡 수정 포인트 2: 이 부분의 오리지널 hr 구분선 마진이 CSS 클래스 주입에 의해 컴팩트하게 리셋됩니다.
             st.markdown("---")
             
             master_categories = ["기존/신규 F-3 Shelf", "ATM / ELOC / SEPA", "전환사채 (CB) / 전환우선주", "워런트 (Warrants)", "Selling Shareholder Resale", "S-8 / 임직원 보상주식"]
