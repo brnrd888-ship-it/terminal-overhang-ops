@@ -49,6 +49,13 @@ else:
         div[data-testid="stExpander"] summary p { color: #ff9900 !important; font-weight: bold !important; font-size: 14px !important; }
         div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] { color: #ffffff !important; font-size: 13px !important; line-height: 1.6; }
         
+        /* 💡 수정 포인트 1: 문제가 된 <hr> 구분선의 거대한 마진을 완벽하게 압축 (상하 4px로 조임) */
+        hr, div[data-testid="stMarkdownContainer"] hr { 
+            margin: 4px 0 !important; 
+            padding: 0 !important;
+            border-color: #3b4656 !important; 
+        }
+        
         /* 반응형 하이브리드 CSS */
         .pc-table-view { display: block !important; }
         .mobile-card-view { display: none !important; }
@@ -88,31 +95,6 @@ else:
         }
         </style>
         """, unsafe_allow_html=True)
-
-# ==========================================
-# ⚙️ 보안 관제 1호: 디스코드 실시간 알림 로깅 엔진 (복구 완료)
-# ==========================================
-def send_discord_log(ticker, company_name, pressure_summary):
-    DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
-    if not DISCORD_WEBHOOK_URL: return 
-    
-    # 디스코드에는 텍스트만 깔끔하게 전달되도록 HTML 태그 제거
-    clean_summary = pressure_summary.replace("🚨 [초극단적 품절주] ", "").replace("🔒 ", "").replace("✅ ", "")
-    
-    payload = {
-        "username": "BLOOMBERG DILUTION RADAR",
-        "embeds": [{
-            "title": f"📊 [ACCESS LOG] TARGET SCANNED: {ticker}",
-            "color": 16750848, 
-            "fields": [
-                {"name": "종목 풀네임", "value": company_name, "inline": True},
-                {"name": "수급 진단 결과", "value": clean_summary, "inline": False}
-            ],
-            "footer": {"text": "TERMINAL-OVERHANG-OPS AUDIT TRACE"}
-        }]
-    }
-    try: requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
-    except: pass
 
 # ==========================================
 # ⚙️ 데이터 연동 백엔드 코어 (SEC & YFinance)
@@ -189,6 +171,25 @@ def get_live_stock_info(ticker):
         
     return {"outstanding_shares": outstanding, "public_float": public_float, "float_ratio": float_ratio, "pressure_summary": pressure, "company_name": company_name, "border_color": border_color}
 
+def send_discord_log(ticker, company_name, pressure_summary):
+    DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
+    if not DISCORD_WEBHOOK_URL: return 
+    clean_summary = pressure_summary.replace("🚨 [초극단적 품절주] ", "").replace("🔒 ", "").replace("✅ ", "")
+    payload = {
+        "username": "BLOOMBERG DILUTION RADAR",
+        "embeds": [{
+            "title": f"📊 [ACCESS LOG] TARGET SCANNED: {ticker}",
+            "color": 16750848, 
+            "fields": [
+                {"name": "종목 풀네임", "value": company_name, "inline": True},
+                {"name": "수급 진단 결과", "value": clean_summary, "inline": False}
+            ],
+            "footer": {"text": "TERMINAL-OVERHANG-OPS AUDIT TRACE"}
+        }]
+    }
+    try: requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=5)
+    except: pass
+
 # ==========================================
 # 🖥️ 보안 관제 2호: 분석 래퍼 엔진 가동
 # ==========================================
@@ -212,22 +213,21 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             
             send_discord_log(ticker_input, stock_info['company_name'], stock_info['pressure_summary'])
             
-            # 주식 정보 헤더
-            st.markdown(f"**📂 [{ticker_input}] {stock_info['company_name']}**")
+            st.markdown(f"### 📊 {stock_info['company_name']}\n*{ticker_input}*")
             st.markdown(f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | **실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n")
             
-            # 진단 경보 박스
             st.markdown(f"""
             <div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 10px 0; border-radius: 2px;'>
                 <b style='color: {stock_info['border_color']}; font-size: 14px;'>🔍 시스템 종합 진단:</b> {stock_info['pressure_summary']}
             </div>
             """, unsafe_allow_html=True)
             
+            # 💡 수정 포인트 2: 이 부분의 오리지널 hr 구분선 마진이 CSS 클래스 주입에 의해 컴팩트하게 리셋됩니다.
             st.markdown("---")
             
             master_categories = ["기존/신규 F-3 Shelf", "ATM / ELOC / SEPA", "전환사채 (CB) / 전환우선주", "워런트 (Warrants)", "Selling Shareholder Resale", "S-8 / 임직원 보상주식"]
             
-            # 1. 🖥️ PC 전용 가로 표 뷰 생성
+            # PC 전용 가로 표 뷰 생성
             pc_html = "<div class='pc-table-view'><table>"
             pc_html += "<tr><th>CATEGORY</th><th>STATUS</th><th>SCALE</th><th>LATEST FILING</th><th>CASH INFLOW</th><th>SHAREHOLDER IMPACT</th><th>RISK</th></tr>"
             for cat in master_categories:
@@ -238,7 +238,7 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             pc_html += "</table></div>"
             st.markdown(pc_html, unsafe_allow_html=True)
             
-            # 2. 📱 모바일 전용 카드 뷰 생성 (공백 리스크 압축 공정)
+            # 모바일 전용 카드 뷰 생성
             mobile_html = "<div class='mobile-card-view'>"
             for cat in master_categories:
                 d = matrix_data.get(cat)
