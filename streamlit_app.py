@@ -43,7 +43,6 @@ else:
         }
         div.stFormSubmitButton > button:hover { background-color: #ff9900 !important; color: #11141a !important; }
         
-        /* 모바일 대응 가로 넘겨보기 터치 스크롤 활성화 */
         table { 
             display: block !important; width: 100% !important; border-collapse: collapse; 
             color: #ffffff !important; margin-top: 5px !important; overflow-x: auto !important; 
@@ -55,7 +54,7 @@ else:
         hr { margin: 0.8rem 0 !important; border-color: #3b4656 !important; }
         h1, h2, h3 { color: #ff9900 !important; margin-top: 5px !important; margin-bottom: 5px !important; }
         
-        /* 💡 개선 1: 접기(Expander) 박스 블룸버그 다크 테마 커스텀 강제 주입 */
+        /* 접기(Expander) 박스 블룸버그 다크 테마 커스텀 강제 주입 */
         div[data-testid="stExpander"] { background-color: #1c222d !important; border: 1px solid #3b4656 !important; border-radius: 4px; }
         div[data-testid="stExpander"] summary p { color: #ff9900 !important; font-weight: bold !important; font-size: 14px !important; }
         div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] { color: #ffffff !important; font-size: 13px !important; line-height: 1.6; }
@@ -74,7 +73,6 @@ else:
 def send_discord_log(ticker, company_name, pressure_summary):
     DISCORD_WEBHOOK_URL = st.secrets.get("DISCORD_WEBHOOK_URL", "")
     if not DISCORD_WEBHOOK_URL: return 
-    # 웹로그 전송 시 HTML 태그 제거 처리
     clean_summary = pressure_summary.replace("<span style='color:#ff3333; font-weight:bold;'>", "").replace("</span>", "")
     payload = {
         "username": "BLOOMBERG DILUTION RADAR",
@@ -109,7 +107,6 @@ def get_cik_from_ticker(ticker):
 
 @st.cache_data(ttl=3600)
 def scan_sec_filings(ticker):
-    # 💡 개선 2: 표 내부의 크리티컬 경보 텍스트들을 HTML 직관적 빨간색(#ff3333) 태그로 선제 주입
     matrix = {
         "기존/신규 F-3 Shelf": {"exists": "없음", "scale": "-", "stage": "최근 1년간 공시 없음", "cash_inflow": "가동 시 유입", "impact": "지분 희석 위험", "risk": "낮음"},
         "ATM / ELOC / SEPA": {"exists": "없음", "scale": "-", "stage": "최근 1년간 공시 없음", "cash_inflow": "-", "impact": "-", "risk": "낮음"},
@@ -152,7 +149,6 @@ def get_live_stock_info(ticker):
     except: outstanding, public_float, company_name = 0, 0, "UNKNOWN COMPANY"
     float_ratio = round((public_float / outstanding) * 100, 1) if outstanding > 0 else 0.0
     
-    # 💡 개선 3: 진단 문구 자체에 레벨별 색상 코드 주입 및 블록 격리 준비
     if public_float == 0: 
         pressure = "<span style='color:#ff9900;'>⚠️ API 오류 또는 정보 비공개 (수동 확인 필요)</span>"
         border_color = "#ff9900"
@@ -200,7 +196,6 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             st.markdown(f"**📂 [{ticker_input}] {stock_info['company_name']}**")
             st.markdown(f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | **실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n")
             
-            # 💡 개선 4: 회색 처리되는 '>' 인용 마크다운을 걷어내고, 진단 수위에 따라 색상이 바뀌는 블룸버그형 경보 테두리 박스로 커스텀 출력
             st.markdown(f"""
             <div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 10px 0; border-radius: 2px;'>
                 <b style='color: {stock_info['border_color']}; font-size: 14px;'>🔍 시스템 종합 진단:</b> {stock_info['pressure_summary']}
@@ -209,7 +204,6 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             
             st.markdown("---")
             
-            # 표 생성 (HTML 파싱 허용 구조)
             table_md = "| CATEGORY | STATUS | SCALE | LATEST FILING | CASH INFLOW | SHAREHOLDER IMPACT | RISK |\n"
             table_md += "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
             
@@ -225,18 +219,33 @@ with streamlit_analytics.track(unsafe_password=admin_password):
                 
             st.markdown(table_md, unsafe_allow_html=True)
 
-    # 💡 개선 5: 맨 아래 배치하는 [접기형 초보자용 사용 팁 가이드]
+    # 💡 튜닝 포인트: 대항목 간격을 벌리고(margin-bottom: 24px) 소항목간 여백은 바짝 붙인 HTML 반응형 레이아웃 엔진 적용
     st.markdown("<br>", unsafe_allow_html=True)
     with st.expander("💡 [요원 가이드] TERMINAL OPERATION QUICK GUIDE (사용 팁 보기)"):
         st.markdown("""
-        ### 📊 3초 퀀트 오버행 분석 공식
-        1. **상단 실제 유통 주식 수(Public Float) 확인**
-           * **500만 주 미만 (🚨초극단적 품절주)**: 적은 거래량으로도 상한가 제한 없이 수백% 폭등할 수 있지만, 반대로 세력이 던지면 하한가 없이 폭락하는 양날의 검입니다. 철저히 **당일 단타**로만 접근하십시오.
-        
-        2. **하단 오버행 매트릭스 리스크 체크**
-           * <span style='color:#ff3333;font-weight:bold;'>⚠️ 존재 (F-3 Shelf)</span>: 회사가 대규모 유상증자 폭탄을 장착해 둔 상태입니다. 주가가 호재를 타고 폭등할 때 회사가 스위치를 켜고 주식을 기습 투하하므로 **오버나이트(다음날로 물량 넘기기)는 절대 자제**하십시오.
-           * <span style='color:#ff3333;font-weight:bold;'>⚠️ 가동 의심 (ATM / ELOC)</span>: 증권사를 통해 장중에 기계적으로 매물을 찔끔찔끔 던지는 악성 매도 계약이 체결된 상태입니다. 주가가 올라가려고 할 때마다 머리를 누르는 '두더지 망치' 역할을 하므로 장기 상승이 어렵습니다.
-        
-        3. **🚀 최고의 단타 황금 조합**
-           * 실제 유통 주식 수는 500만 주 미만으로 가벼운데, 아래 매트릭스에 유상증자 무기(<span style='color:#ff3333;font-weight:bold;'>F-3, ATM</span>) 리스크가 전부 **'없음/낮음'**인 종목 ➡️ 위에서 누르는 매물이 전혀 없기 때문에 세력이 마음 놓고 펌핑을 주도할 수 있는 최고의 작전주 후보군입니다.
+        <div style='line-height: 1.5; padding: 5px 0;'>
+            <h3 style='color: #ff9900; margin-bottom: 18px; font-size: 16px;'>📊 3초 퀀트 오버행 분석 공식</h3>
+            
+            <div style='margin-bottom: 24px;'>
+                <div style='font-size: 14px; font-weight: bold; color: #ff9900; margin-bottom: 6px;'>1. 상단 실제 유통 주식 수 (Public Float) 확인</div>
+                <div style='margin-left: 14px; color: #ffffff; font-size: 13px;'>
+                    • 500만 주 미만 (<span style='color:#ff3333; font-weight:bold;'>🚨 초극단적 품절주</span>): 적은 거래량으로도 상한가 제한 없이 수백% 폭등할 수 있지만, 반대로 세력이 던지면 하한가 없이 폭락하는 양날의 검입니다. 철저히 당일 단타로만 접근하십시오.
+                </div>
+            </div>
+            
+            <div style='margin-bottom: 24px;'>
+                <div style='font-size: 14px; font-weight: bold; color: #ff9900; margin-bottom: 6px;'>2. 하단 오버행 매트릭스 리스크 체크</div>
+                <div style='margin-left: 14px; color: #ffffff; font-size: 13px;'>
+                    <div style='margin-bottom: 6px;'>• <span style='color:#ff3333; font-weight:bold;'>⚠️ 존재 (F-3 Shelf)</span>: 회사가 대규모 유상증자 폭탄을 장착해 둔 상태입니다. 주가가 호재를 타고 폭등할 때 회사가 스위치를 켜고 주식을 기습 투하하므로 오버나이트(다음날로 물량 넘기기)는 절대 자제하십시오.</div>
+                    <div>• <span style='color:#ff3333; font-weight:bold;'>⚠️ 가동 의심 (ATM / ELOC)</span>: 증권사를 통해 장중에 기계적으로 매물을 찔끔찔끔 던지는 악성 매도 계약이 체결된 상태입니다. 주가가 올라가려고 할 때마다 머리를 누르는 '두더지 망치' 역할을 하므로 장기 상승이 어렵습니다.</div>
+                </div>
+            </div>
+            
+            <div style='margin-bottom: 8px;'>
+                <div style='font-size: 14px; font-weight: bold; color: #ff9900; margin-bottom: 6px;'>3. 🚀 최고의 단타 황금 조합</div>
+                <div style='margin-left: 14px; color: #ffffff; font-size: 13px;'>
+                    • 실제 유통 주식 수는 500만 주 미만으로 가벼운데, 아래 매트릭스에 유상증자 무기(<span style='color:#ff3333; font-weight:bold;'>F-3, ATM</span>) 리스크가 전부 <span style='color:#00FF41; font-weight:bold;'>'없음/낮음'</span>인 종목 ➡️ 위에서 누르는 매물이 전혀 없기 때문에 세력이 마음 놓고 펌핑을 주도할 수 있는 최고의 작전주 후보군입니다.
+                </div>
+            </div>
+        </div>
         """, unsafe_allow_html=True)
