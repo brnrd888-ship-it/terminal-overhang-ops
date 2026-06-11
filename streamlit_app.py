@@ -12,6 +12,7 @@ st.set_page_config(page_title="Terminal Overhang Ops", layout="wide")
 is_analytics_mode = "analytics" in st.query_params
 
 if is_analytics_mode:
+    # 📊 관리자 전용 라이트 대시보드 테마
     st.markdown("""
         <style>
         .block-container { padding-top: 2.5rem !important; max-width: 90% !important; }
@@ -23,11 +24,14 @@ if is_analytics_mode:
         </style>
         """, unsafe_allow_html=True)
 else:
+    # 🍊 가독성 고도화 버전 블룸버그 터미널 앰버 다크 테마
     st.markdown("""
         <style>
+        /* [기본 레이아웃 및 폰트] */
         .block-container { padding-top: 2.5rem !important; padding-bottom: 1rem !important; max-width: 95% !important; }
         .stApp { background-color: #11141a !important; color: #ffffff !important; font-family: 'Consolas', 'Courier New', monospace; }
         
+        /* [입력창 스타일 셋] */
         div.stTextInput > label, label[data-testid="stWidgetLabel"] { 
             color: #ff9900 !important; font-size: 15px !important; font-weight: bold !important; 
             margin-bottom: 5px !important; display: inline-block !important;
@@ -37,25 +41,29 @@ else:
             background-color: #1c222d !important; color: #ffffff !important; border: 1px solid #3b4656 !important; font-size: 15px;
         }
         
+        /* [폼 전송 버튼 스타일 셋] */
         div.stFormSubmitButton > button { 
             background-color: #2b3543 !important; color: #ff9900 !important; border: 1px solid #ff9900 !important; 
             font-weight: bold !important; width: 100% !important; height: 38px !important; font-size: 14px !important;
         }
         div.stFormSubmitButton > button:hover { background-color: #ff9900 !important; color: #11141a !important; }
         
+        /* [타이틀 및 헤더 구조] */
         h1, h2, h3 { color: #ff9900 !important; margin-top: 5px !important; margin-bottom: 5px !important; font-weight: bold !important; }
         
+        /* [접기 컴포넌트 커스텀 엘리먼트] */
         div[data-testid="stExpander"] { background-color: #1c222d !important; border: 1px solid #3b4656 !important; border-radius: 4px; }
         div[data-testid="stExpander"] summary p { color: #ff9900 !important; font-weight: bold !important; font-size: 14px !important; }
         div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] { color: #ffffff !important; font-size: 13px !important; line-height: 1.6; }
         
+        /* [구분선(hr) 패딩 마진 정밀 압축] */
         hr, div[data-testid="stMarkdownContainer"] hr { 
             margin: 4px 0 !important; 
             padding: 0 !important;
             border-color: #3b4656 !important; 
         }
         
-        /* 반응형 하이브리드 CSS */
+        /* [PC 전용 데스크톱 그리드 테이블 스타일] */
         .pc-table-view { display: block !important; }
         .mobile-card-view { display: none !important; }
         
@@ -63,25 +71,23 @@ else:
         th { background-color: #1c222d !important; color: #ff9900 !important; border: 1px solid #3b4656 !important; font-size: 13px; padding: 8px 12px !important; }
         td { border: 1px solid #3b4656 !important; padding: 8px 12px !important; font-size: 12px; background-color: #11141a !important; }
         
-        /* 블룸버그 핏 전용 하이퍼링크 스타일 지정 */
-        table a, .overhang-card a {
-            color: #00FF41 !important; 
-            text-decoration: none !important;
-            font-weight: bold !important;
-        }
-        table a:hover, .overhang-card a:hover {
-            text-decoration: underline !important;
-            color: #ff9900 !important;
-        }
+        /* [앵커 링크 공통 네온 앰버 스타일팅] */
+        table a, .overhang-card a { color: #ff9900 !important; text-decoration: none !important; font-weight: bold !important; }
+        table a:hover, .overhang-card a:hover { text-decoration: underline !important; color: #00FF41 !important; }
         
+        /* ==========================================
+           📱 모바일 크로스 브라우징 반응형 미디어 쿼리 
+           ========================================== */
         @media (max-width: 768px) {
             .block-container { max-width: 100% !important; padding: 1rem !important; padding-top: 2rem !important; }
             h3 { font-size: 16px !important; line-height: 1.3 !important; }
             div.stTextInput > label { font-size: 14px !important; }
             
+            /* 가로 표를 증발시키고 세로 카드 배열 활성화 */
             .pc-table-view { display: none !important; }
             .mobile-card-view { display: block !important; }
             
+            /* 모바일 세로형 개별 카드 컴포넌트 명세 복구 */
             .overhang-card {
                 background-color: #1c222d !important;
                 border: 1px solid #3b4656 !important;
@@ -124,7 +130,6 @@ def get_cik_from_ticker(ticker):
 
 @st.cache_data(ttl=3600)
 def scan_sec_filings(ticker):
-    # 💡 기본 매트릭스에 딥링크 생성용 url 필드 기본값 세팅
     matrix = {
         "기존/신규 F-3 Shelf": {"exists": "없음", "scale": "-", "stage": "최근 1년간 공시 없음", "cash_inflow": "가동 시 유입", "impact": "지분 희석 위험", "risk": "낮음", "url": None},
         "ATM / ELOC / SEPA": {"exists": "없음", "scale": "-", "stage": "최근 1년간 공시 없음", "cash_inflow": "-", "impact": "-", "risk": "낮음", "url": None},
@@ -144,22 +149,31 @@ def scan_sec_filings(ticker):
         forms, dates, acc_nos = recent_filings['form'], recent_filings['filingDate'], recent_filings['accessionNumber']
         
         found_f3, found_atm, found_s8, found_resale = False, False, False, False
+        latest_report_url = None
+        
         for i in range(len(forms)):
             form_type, filing_date, acc_no = forms[i], dates[i], acc_nos[i]
-            
-            # 💡 핵심: SEC EDGAR 공식 명세서에 따른 웹뷰 인덱스 딥링크 URL 파싱 로직 정밀 구현
-            # CIK와 대시가 제거된 Accession Number 조합으로 주소가 빌드됨
             raw_acc = acc_no.replace("-", "")
             doc_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{raw_acc}/{acc_no}-index.htm"
             
+            if form_type in ['10-Q', '10-K', '20-F'] and not latest_report_url:
+                latest_report_url = doc_url
+            
             if form_type in ['F-3', 'S-3', 'F-3ASR', 'S-3ASR'] and not found_f3:
-                matrix["기존/신규 F-3 Shelf"] = {"exists": "⚠️ 존재", "scale": "본문 확인", "stage": f"발견: {filing_date}", "cash_inflow": "가동 시 유입", "impact": "물량 폭증 위험", "risk": "매우 높음", "url": doc_url}; found_f3 = True
+                matrix["기존/신규 F-3 Shelf"] = {"exists": "⚠️ 존재", "scale": "↗ 본문 확인", "stage": f"발견: {filing_date}", "cash_inflow": "가동 시 유입", "impact": "물량 폭증 위험", "risk": "매우 높음", "url": doc_url}; found_f3 = True
             if form_type in ['424B5', '424B2'] and not found_atm:
-                matrix["ATM / ELOC / SEPA"] = {"exists": "⚠️ 가동 의심", "scale": "본문 확인", "stage": f"발견: {filing_date}", "cash_inflow": "즉각 유입", "impact": "강한 매물대", "risk": "높음", "url": doc_url}; found_atm = True
+                matrix["ATM / ELOC / SEPA"] = {"exists": "⚠️ 가동 의심", "scale": "↗ 본문 확인", "stage": f"발견: {filing_date}", "cash_inflow": "즉각 유입", "impact": "강한 매물대", "risk": "높음", "url": doc_url}; found_atm = True
             if form_type in ['S-1', 'S-1/A', '424B3'] and not found_resale:
-                matrix["Selling Shareholder Resale"] = {"exists": "확인 요망", "scale": "본문 확인", "stage": f"제출: {filing_date}", "cash_inflow": "없음", "impact": "기존 주주 덤핑", "risk": "높음", "url": doc_url}; found_resale = True
+                matrix["Selling Shareholder Resale"] = {"exists": "확인 요망", "scale": "↗ 본문 확인", "stage": f"제출: {filing_date}", "cash_inflow": "없음", "impact": "기존 주주 덤핑", "risk": "높음", "url": doc_url}; found_resale = True
             if form_type == 'S-8' and not found_s8:
-                matrix["S-8 / 임직원 보상주식"] = {"exists": "존재", "scale": "본문 확인", "stage": f"발견: {filing_date}", "cash_inflow": "행사 시 일부", "impact": "영향 미미", "risk": "낮음", "url": doc_url}; found_s8 = True
+                matrix["S-8 / 임직원 보상주식"] = {"exists": "존재", "scale": "↗ 본문 확인", "stage": f"발견: {filing_date}", "cash_inflow": "행사 시 일부", "impact": "영향 미미", "risk": "낮음", "url": doc_url}; found_s8 = True
+                
+        if latest_report_url:
+            matrix["전환사채 (CB) / 전환우선주"]["url"] = latest_report_url
+            matrix["전환사채 (CB) / 전환우선주"]["scale"] = "↗ 최신 보고서 확인"
+            matrix["워런트 (Warrants)"]["url"] = latest_report_url
+            matrix["워런트 (Warrants)"]["scale"] = "↗ 최신 보고서 확인"
+            
     except: pass
     return matrix
 
@@ -264,60 +278,47 @@ with streamlit_analytics.track(unsafe_password=admin_password):
                 False: {"color": "#3388ff", "sign": "-", "emoji": "🔻"}
             }[is_positive]
             
-            st.markdown(
-                f"<h3 style='margin-top: 5px; margin-bottom: 0px; color: #ff9900;'>{stock_info['company_name']} ({ticker_input})</h3>", 
-                unsafe_allow_html=True
-            )
+            # [1] 종목명 타이틀 렌더링
+            st.markdown(f"<h3 style='margin-top: 5px; margin-bottom: 0px; color: #ff9900;'>📂 {stock_info['company_name']} ({ticker_input})</h3>", unsafe_allow_html=True)
             
-            st.markdown(
-                f"<h2 style='margin-top: 2px; margin-bottom: 6px; display: inline-block; font-weight: bold;'>"
-                f"${price_fmt} "
-                f"<span style='color: {ui_status['color']}; font-size: 18px; font-weight: bold; margin-left: 6px;'>"
-                f"{ui_status['emoji']} {ui_status['sign']}{change_fmt} ({ui_status['sign']}{abs(change_percent):.2f}%)"
-                f"</span>"
-                f"</h2>",
-                unsafe_allow_html=True
-            )
+            # [2] 현재 주가 및 등락금액 변수 바인딩
+            st.markdown(f"<h2 style='margin-top: 2px; margin-bottom: 6px; display: inline-block; font-weight: bold;'>${price_fmt} <span style='color: {ui_status['color']}; font-size: 18px; font-weight: bold; margin-left: 6px;'>{ui_status['emoji']} {ui_status['sign']}{change_fmt} ({ui_status['sign']}{abs(change_percent):.2f}%)</span></h2>", unsafe_allow_html=True)
             
-            st.markdown(
-                f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | "
-                f"**실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n"
-            )
+            # [3] 물량 파싱 라인 생성
+            st.markdown(f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | **실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n")
             
-            st.markdown(f"""
-            <div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 8px 0; border-radius: 2px;'>
-                <b style='color: {stock_info['border_color']}; font-size: 14px;'>🔍 시스템 종합 진단:</b> {stock_info['pressure_summary']}
-            </div>
-            """, unsafe_allow_html=True)
-            
+            # 종합 진단 경보 컨테이너
+            st.markdown(f"<div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 8px 0; border-radius: 2px;'><b style='color: {stock_info['border_color']}; font-size: 14px;'>🔍 시스템 종합 진단:</b> {stock_info['pressure_summary']}</div>", unsafe_allow_html=True)
             st.markdown("---")
             
             master_categories = ["기존/신규 F-3 Shelf", "ATM / ELOC / SEPA", "전환사채 (CB) / 전환우선주", "워런트 (Warrants)", "Selling Shareholder Resale", "S-8 / 임직원 보상주식"]
             
-            # 1. 🖥️ PC 전용 가로 표 뷰 생성 (본문확인에 하이퍼링크 및 앵커 주입)
+            # 1. 🖥️ 데스크톱 그리드뷰 렌더링
             pc_html = "<div class='pc-table-view'><table>"
             pc_html += "<tr><th>CATEGORY</th><th>STATUS</th><th>SCALE</th><th>LATEST FILING</th><th>CASH INFLOW</th><th>SHAREHOLDER IMPACT</th><th>RISK</th></tr>"
             for cat in master_categories:
                 d = matrix_data.get(cat)
-                c_status = f"<span style='color:#ff3333;font-weight:bold;'>{d['exists']}</span>" if "⚠️" in d['exists'] else d['exists']
+                c_status = f"<a href='{d['url']}' target='_blank'>{d['exists']}</a>" if d['url'] else d['exists']
+                if "⚠️" in d['exists'] and d['url']:
+                    c_status = f"<a href='{d['url']}' target='_blank' style='color:#ff3333;'>{d['exists']}</a>"
+                
                 c_risk = f"<span style='color:#ff3333;font-weight:bold;'>{d['risk']}</span>" if d['risk'] in ['매우 높음', '높음'] else (f"<span style='color:#ff9900;font-weight:bold;'>{d['risk']}</span>" if d['risk'] == '확인 필요' else d['risk'])
-                
-                # 💡 링크 유무에 따른 스케일(본문확인) 컴포넌트 앵커 태그 바인딩 분기
-                scale_view = f"<a href='{d['url']}' target='_blank'>↗ 본문 확인</a>" if d['url'] else d['scale']
+                scale_view = f"<a href='{d['url']}' target='_blank'>{d['scale']}</a>" if d['url'] else d['scale']
                 cat_view = f"<a href='{d['url']}' target='_blank'>{cat}</a>" if d['url'] else f"<b>{cat}</b>"
-                
                 pc_html += f"<tr><td>{cat_view}</td><td>{c_status}</td><td>{scale_view}</td><td>{d['stage']}</td><td>{d['cash_inflow']}</td><td>{d['impact']}</td><td>{c_risk}</td></tr>"
             pc_html += "</table></div>"
             st.markdown(pc_html, unsafe_allow_html=True)
             
-            # 2. 📱 모바일 전용 카드 뷰 생성 (카테고리 및 스케일 딥링크 동시 탑재)
+            # 2. 📱 모바일 리스폰시브 카드뷰 렌더링
             mobile_html = "<div class='mobile-card-view'>"
             for cat in master_categories:
                 d = matrix_data.get(cat)
-                c_status = f"<span style='color:#ff3333;font-weight:bold;'>{d['exists']}</span>" if "⚠️" in d['exists'] else d['exists']
+                c_status = f"<a href='{d['url']}' target='_blank'>{d['exists']}</a>" if d['url'] else d['exists']
+                if "⚠️" in d['exists'] and d['url']:
+                    c_status = f"<a href='{d['url']}' target='_blank' style='color:#ff3333;'>{d['exists']}</a>"
+                    
                 c_risk = f"<span style='color:#ff3333;font-weight:bold;'>{d['risk']}</span>" if d['risk'] in ['매우 높음', '높음'] else (f"<span style='color:#ff9900;font-weight:bold;'>{d['risk']}</span>" if d['risk'] == '확인 필요' else d['risk'])
-                
-                scale_view = f"<a href='{d['url']}' target='_blank'>↗ 본문 확인 링크</a>" if d['url'] else d['scale']
+                scale_view = f"<a href='{d['url']}' target='_blank'>{d['scale']}</a>" if d['url'] else d['scale']
                 cat_view = f"<a href='{d['url']}' target='_blank'>📌 {cat}</a>" if d['url'] else f"📌 {cat}"
                 
                 card_chunk = (
