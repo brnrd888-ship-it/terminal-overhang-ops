@@ -3,7 +3,7 @@ import yfinance as yf
 import requests
 import time
 import streamlit_analytics2 as streamlit_analytics
-import streamlit.components.v1 as components  # 💡 차트 임베드를 위한 컴포넌트 추가
+import streamlit.components.v1 as components
 
 # ==========================================
 # 0. 반응형 블룸버그 터미널 vs 라이트 어드민 테마 동적 제어
@@ -51,7 +51,7 @@ else:
         div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] { color: #ffffff !important; font-size: 13px !important; line-height: 1.6; }
         
         hr, div[data-testid="stMarkdownContainer"] hr { 
-            margin: 8px 0 !important; 
+            margin: 4px 0 !important; 
             padding: 0 !important;
             border-color: #3b4656 !important; 
         }
@@ -100,36 +100,20 @@ else:
         """, unsafe_allow_html=True)
 
 # ==========================================
-# ⚙️ 💡 신규 기능: 트레이딩뷰 오더블록 전술 차트 임베드 엔진
+# ⚙️ 💡 우회 최적화: 무료 차트 레이아웃 딥링크 임베드 엔진
 # ==========================================
 def render_ops_chart(ticker):
-    script_id = "EcE2iyRx"
+    chart_layout_id = "cqlbNcAm"
     
-    # 트레이딩뷰 위젯 내부 소스가 터미널 검은 배경색(#11141a)과 이질감 없도록 완벽 튜닝
+    # 사용자가 입력한 티커를 미국의 NASDAQ 시장 데이터 소스로 결합하여 주가 불일치 방지
+    embed_url = f"https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=NASDAQ:{ticker}&interval=5&theme=dark&style=1&timezone=America%2FNew_York&studies=%5B%5D&layout={chart_layout_id}"
+    
     tv_html = f"""
-    <div id="ops_terminal_chart" style="height: 500px; width: 100%; background-color: #11141a;"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <script type="text/javascript">
-    new TradingView.widget({{
-      "autosize": true,
-      "symbol": "{ticker}",
-      "interval": "5",
-      "timezone": "America/New_York",
-      "theme": "dark",
-      "style": "1",
-      "locale": "en",
-      "enable_publishing": false,
-      "hide_side_toolbar": false,
-      "allow_symbol_change": true,
-      "extended_hours": true,
-      "studies": [
-        "{script_id}@tv-basicstudies"
-      ],
-      "container_id": "ops_terminal_chart"
-    }});
-    </script>
+    <iframe src="{embed_url}" 
+            style="width: 100%; height: 500px; border: 1px solid #3b4656; background-color: #11141a;" 
+            allowfullscreen>
+    </iframe>
     """
-    # 여백 최적화를 위해 차트 컴포넌트의 가로 높이를 520px로 조절
     components.html(tv_html, height=520)
 
 # ==========================================
@@ -279,7 +263,6 @@ with streamlit_analytics.track(unsafe_password=admin_password):
         else:
             stock_info = get_live_stock_info(ticker_input)
             matrix_data = scan_sec_filings(ticker_input)
-            
             send_discord_log(ticker_input, stock_info['company_name'], stock_info['pressure_summary'], stock_info['border_color'])
             
             current_price = stock_info['current_price']
@@ -295,19 +278,12 @@ with streamlit_analytics.track(unsafe_password=admin_password):
                 False: {"color": "#3388ff", "sign": "-", "emoji": "🔻"}
             }[is_positive]
             
-            # [1] 종목명 타이틀 렌더링
             st.markdown(f"<h3 style='margin-top: 5px; margin-bottom: 0px; color: #ff9900;'>📂 {stock_info['company_name']} ({ticker_input})</h3>", unsafe_allow_html=True)
-            
-            # [2] 현재 주가 및 등락금액 변수 바인딩
             st.markdown(f"<h2 style='margin-top: 2px; margin-bottom: 6px; display: inline-block; font-weight: bold;'>${price_fmt} <span style='color: {ui_status['color']}; font-size: 18px; font-weight: bold; margin-left: 6px;'>{ui_status['emoji']} {ui_status['sign']}{change_fmt} ({ui_status['sign']}{abs(change_percent):.2f}%)</span></h2>", unsafe_allow_html=True)
-            
-            # [3] 물량 파싱 라인 생성
             st.markdown(f"• **총 발행 주식 수:** {stock_info['outstanding_shares']:,} 주 | **실제 유통 주식 수:** {stock_info['public_float']:,} 주 ({stock_info['float_ratio']}%)\n")
-            
-            # 종합 진단 경보 컨테이너
             st.markdown(f"<div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 8px 0; border-radius: 2px;'><b style='color: {stock_info['border_color']}; font-size: 14px;'>🔍 시스템 종합 진단:</b> {stock_info['pressure_summary']}</div>", unsafe_allow_html=True)
             
-            # 💡 셋업 완료: 종합 진단 박스 아래에 해당 티커의 오더블록 5분봉 전술 차트를 즉시 렌더링
+            # 📊 오더블록 전술 차트 호출 (입력된 티커 연동)
             st.markdown("#### 📊 TACTICAL RADAR CHART (5M + EXTENDED SESSION)")
             render_ops_chart(ticker_input)
             
@@ -315,7 +291,7 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             
             master_categories = ["기존/신규 F-3 Shelf", "ATM / ELOC / SEPA", "전환사채 (CB) / 전환우선주", "워런트 (Warrants)", "Selling Shareholder Resale", "S-8 / 임직원 보상주식"]
             
-            # 1. 🖥Header 데스크톱 그리드뷰 렌더링
+            # 1. 🖥️ PC 전용 가로 표 뷰 생성
             pc_html = "<div class='pc-table-view'><table>"
             pc_html += "<tr><th>CATEGORY</th><th>STATUS</th><th>SCALE</th><th>LATEST FILING</th><th>CASH INFLOW</th><th>SHAREHOLDER IMPACT</th><th>RISK</th></tr>"
             for cat in master_categories:
@@ -331,7 +307,7 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             pc_html += "</table></div>"
             st.markdown(pc_html, unsafe_allow_html=True)
             
-            # 2. 📱 모바일 리스폰시브 카드뷰 렌더링
+            # 2. 📱 모바일 전용 카드 뷰 생성
             mobile_html = "<div class='mobile-card-view'>"
             for cat in master_categories:
                 d = matrix_data.get(cat)
