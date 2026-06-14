@@ -103,10 +103,30 @@ else:
 # ⚙️ 💡 우회 최적화: 무료 차트 레이아웃 딥링크 임베드 엔진
 # ==========================================
 def render_ops_chart(ticker):
-    chart_layout_id = "cqlbNcAm"
+    # 💡 1. 트레이딩뷰에서 [공유 켜기] 및 [지표 복사 허용]을 완료한 고유 차트 ID 입력
+    chart_layout_id = "cqlbNcAm "
     
-    # 사용자가 입력한 티커를 미국의 NASDAQ 시장 데이터 소스로 결합하여 주가 불일치 방지
-    embed_url = f"https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=NASDAQ:{ticker}&interval=5&theme=dark&style=1&timezone=America%2FNew_York&studies=%5B%5D&layout={chart_layout_id}"
+    # 💡 2. yfinance를 통해 해당 종목의 정식 거래소 코드를 동적으로 확보 시도
+    exchange_prefix = ""
+    try:
+        stock = yf.Ticker(ticker)
+        exchange_raw = stock.info.get('exchange', '').upper()
+        
+        # 야후 파이낸스 거래소명을 트레이딩뷰 규격 접두사로 맵핑
+        if "NMS" in exchange_raw or "NGM" in exchange_raw or "NASDAQ" in exchange_raw:
+            exchange_prefix = "NASDAQ:"
+        elif "NYE" in exchange_raw or "NYSE" in exchange_raw:
+            exchange_prefix = "NYSE:"
+        elif "ASE" in exchange_raw or "AMEX" in exchange_raw:
+            exchange_prefix = "AMEX:"
+    except:
+        pass # 에러 발생 시 빈값 처리하여 트레이딩뷰 기본 검색 엔진에 위임
+        
+    # 최종 티커 포맷팅 (예: NASDAQ:UUU 또는 명확하지 않을 땐 UUU로 통합)
+    formatted_symbol = f"{exchange_prefix}{ticker}"
+    
+    # 💡 3. 거래소 수동 강제를 제외하고 트레이딩뷰 기본 매칭 쿼리로 안전하게 변환된 URL 구조
+    embed_url = f"https://www.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol={formatted_symbol}&interval=5&theme=dark&style=1&timezone=America%2FNew_York&studies=%5B%5D&layout={chart_layout_id}"
     
     tv_html = f"""
     <iframe src="{embed_url}" 
