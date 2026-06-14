@@ -3,6 +3,7 @@ import yfinance as yf
 import requests
 import time
 import streamlit_analytics2 as streamlit_analytics
+import streamlit.components.v1 as components  # 💡 차트 임베드를 위한 컴포넌트 추가
 
 # ==========================================
 # 0. 반응형 블룸버그 터미널 vs 라이트 어드민 테마 동적 제어
@@ -12,7 +13,6 @@ st.set_page_config(page_title="Terminal Overhang Ops", layout="wide")
 is_analytics_mode = "analytics" in st.query_params
 
 if is_analytics_mode:
-    # 📊 관리자 전용 라이트 대시보드 테마
     st.markdown("""
         <style>
         .block-container { padding-top: 2.5rem !important; max-width: 90% !important; }
@@ -24,14 +24,11 @@ if is_analytics_mode:
         </style>
         """, unsafe_allow_html=True)
 else:
-    # 🍊 가독성 고도화 버전 블룸버그 터미널 앰버 다크 테마
     st.markdown("""
         <style>
-        /* [기본 레이아웃 및 폰트] */
         .block-container { padding-top: 2.5rem !important; padding-bottom: 1rem !important; max-width: 95% !important; }
         .stApp { background-color: #11141a !important; color: #ffffff !important; font-family: 'Consolas', 'Courier New', monospace; }
         
-        /* [입력창 스타일 셋] */
         div.stTextInput > label, label[data-testid="stWidgetLabel"] { 
             color: #ff9900 !important; font-size: 15px !important; font-weight: bold !important; 
             margin-bottom: 5px !important; display: inline-block !important;
@@ -41,29 +38,25 @@ else:
             background-color: #1c222d !important; color: #ffffff !important; border: 1px solid #3b4656 !important; font-size: 15px;
         }
         
-        /* [폼 전송 버튼 스타일 셋] */
         div.stFormSubmitButton > button { 
             background-color: #2b3543 !important; color: #ff9900 !important; border: 1px solid #ff9900 !important; 
             font-weight: bold !important; width: 100% !important; height: 38px !important; font-size: 14px !important;
         }
         div.stFormSubmitButton > button:hover { background-color: #ff9900 !important; color: #11141a !important; }
         
-        /* [타이틀 및 헤더 구조] */
         h1, h2, h3 { color: #ff9900 !important; margin-top: 5px !important; margin-bottom: 5px !important; font-weight: bold !important; }
         
-        /* [접기 컴포넌트 커스텀 엘리먼트] */
         div[data-testid="stExpander"] { background-color: #1c222d !important; border: 1px solid #3b4656 !important; border-radius: 4px; }
         div[data-testid="stExpander"] summary p { color: #ff9900 !important; font-weight: bold !important; font-size: 14px !important; }
         div[data-testid="stExpander"] div[data-testid="stMarkdownContainer"] { color: #ffffff !important; font-size: 13px !important; line-height: 1.6; }
         
-        /* [구분선(hr) 패딩 마진 정밀 압축] */
         hr, div[data-testid="stMarkdownContainer"] hr { 
-            margin: 4px 0 !important; 
+            margin: 8px 0 !important; 
             padding: 0 !important;
             border-color: #3b4656 !important; 
         }
         
-        /* [PC 전용 데스크톱 그리드 테이블 스타일] */
+        /* 반응형 하이브리드 CSS */
         .pc-table-view { display: block !important; }
         .mobile-card-view { display: none !important; }
         
@@ -71,23 +64,17 @@ else:
         th { background-color: #1c222d !important; color: #ff9900 !important; border: 1px solid #3b4656 !important; font-size: 13px; padding: 8px 12px !important; }
         td { border: 1px solid #3b4656 !important; padding: 8px 12px !important; font-size: 12px; background-color: #11141a !important; }
         
-        /* [앵커 링크 공통 네온 앰버 스타일팅] */
         table a, .overhang-card a { color: #ff9900 !important; text-decoration: none !important; font-weight: bold !important; }
         table a:hover, .overhang-card a:hover { text-decoration: underline !important; color: #00FF41 !important; }
         
-        /* ==========================================
-           📱 모바일 크로스 브라우징 반응형 미디어 쿼리 
-           ========================================== */
         @media (max-width: 768px) {
             .block-container { max-width: 100% !important; padding: 1rem !important; padding-top: 2rem !important; }
             h3 { font-size: 16px !important; line-height: 1.3 !important; }
             div.stTextInput > label { font-size: 14px !important; }
             
-            /* 가로 표를 증발시키고 세로 카드 배열 활성화 */
             .pc-table-view { display: none !important; }
             .mobile-card-view { display: block !important; }
             
-            /* 모바일 세로형 개별 카드 컴포넌트 명세 복구 */
             .overhang-card {
                 background-color: #1c222d !important;
                 border: 1px solid #3b4656 !important;
@@ -111,6 +98,39 @@ else:
         }
         </style>
         """, unsafe_allow_html=True)
+
+# ==========================================
+# ⚙️ 💡 신규 기능: 트레이딩뷰 오더블록 전술 차트 임베드 엔진
+# ==========================================
+def render_ops_chart(ticker):
+    script_id = "EcE2iyRx"
+    
+    # 트레이딩뷰 위젯 내부 소스가 터미널 검은 배경색(#11141a)과 이질감 없도록 완벽 튜닝
+    tv_html = f"""
+    <div id="ops_terminal_chart" style="height: 500px; width: 100%; background-color: #11141a;"></div>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script type="text/javascript">
+    new TradingView.widget({{
+      "autosize": true,
+      "symbol": "{ticker}",
+      "interval": "5",
+      "timezone": "America/New_York",
+      "theme": "dark",
+      "style": "1",
+      "locale": "en",
+      "enable_publishing": false,
+      "hide_side_toolbar": false,
+      "allow_symbol_change": true,
+      "extended_hours": true,
+      "studies": [
+        "{script_id}@tv-basicstudies"
+      ],
+      "container_id": "ops_terminal_chart"
+    }});
+    </script>
+    """
+    # 여백 최적화를 위해 차트 컴포넌트의 가로 높이를 520px로 조절
+    components.html(tv_html, height=520)
 
 # ==========================================
 # ⚙️ 데이터 연동 백엔드 코어 (SEC & YFinance)
@@ -185,15 +205,12 @@ def get_live_stock_info(ticker):
         outstanding = info.get('sharesOutstanding') or 0
         public_float = info.get('floatShares') or 0
         company_name = info.get('longName') or info.get('shortName') or "UNKNOWN COMPANY"
-        
         current_price = info.get('regularMarketPrice') or info.get('currentPrice') or 0.0
         price_change = info.get('regularMarketChange') or 0.0
         price_change_percent = info.get('regularMarketChangePercent') or 0.0
-        
     except: 
         outstanding, public_float, company_name = 0, 0, "UNKNOWN COMPANY"
         current_price, price_change, price_change_percent = 0.0, 0.0, 0.0
-        
     float_ratio = round((public_float / outstanding) * 100, 1) if outstanding > 0 else 0.0
     
     if public_float == 0: 
@@ -289,11 +306,16 @@ with streamlit_analytics.track(unsafe_password=admin_password):
             
             # 종합 진단 경보 컨테이너
             st.markdown(f"<div style='border-left: 4px solid {stock_info['border_color']}; background-color: #1c222d; padding: 10px 15px; margin: 8px 0; border-radius: 2px;'><b style='color: {stock_info['border_color']}; font-size: 14px;'>🔍 시스템 종합 진단:</b> {stock_info['pressure_summary']}</div>", unsafe_allow_html=True)
+            
+            # 💡 셋업 완료: 종합 진단 박스 아래에 해당 티커의 오더블록 5분봉 전술 차트를 즉시 렌더링
+            st.markdown("#### 📊 TACTICAL RADAR CHART (5M + EXTENDED SESSION)")
+            render_ops_chart(ticker_input)
+            
             st.markdown("---")
             
             master_categories = ["기존/신규 F-3 Shelf", "ATM / ELOC / SEPA", "전환사채 (CB) / 전환우선주", "워런트 (Warrants)", "Selling Shareholder Resale", "S-8 / 임직원 보상주식"]
             
-            # 1. 🖥️ 데스크톱 그리드뷰 렌더링
+            # 1. 🖥Header 데스크톱 그리드뷰 렌더링
             pc_html = "<div class='pc-table-view'><table>"
             pc_html += "<tr><th>CATEGORY</th><th>STATUS</th><th>SCALE</th><th>LATEST FILING</th><th>CASH INFLOW</th><th>SHAREHOLDER IMPACT</th><th>RISK</th></tr>"
             for cat in master_categories:
